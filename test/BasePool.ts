@@ -1,6 +1,6 @@
-import { BigNumber, constants } from "@ethereum-waffle/provider/node_modules/ethers";
 import { formatEther, parseEther } from "@ethersproject/units";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber, constants } from "ethers";
 import { expect } from "chai";
 import hre from "hardhat";
 import {    

@@ -24,3 +24,15 @@ coverage.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.commitlintrc.yaml
+.editorconfig
+.eslintignore
+.eslintrc.yaml
+.lintstagedrc
+.prettierignore
+.prettierrc.yaml
+.solcover.js
+.solhint.json
+.solhintignore
+.yarnrc.yml
+.DS_Store
