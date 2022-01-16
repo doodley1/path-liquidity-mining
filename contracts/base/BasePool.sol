@@ -22,6 +22,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
     ITimeLockPool public immutable escrowPool;
     uint256 public immutable escrowPortion; // how much is escrowed 1e18 == 100%
     uint256 public immutable escrowDuration; // escrow duration in seconds
+    uint256 public totalRewardsClaimed = 0;
 
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
 
@@ -71,7 +72,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         uint256 rewardAmount = _prepareCollect(_msgSender());
         uint256 escrowedRewardAmount = rewardAmount * escrowPortion / 1e18;
         uint256 nonEscrowedRewardAmount = rewardAmount - escrowedRewardAmount;
-
+        totalRewardsClaimed += rewardAmount;
         if(escrowedRewardAmount != 0 && address(escrowPool) != address(0)) {
             escrowPool.deposit(escrowedRewardAmount, escrowDuration, _receiver);
         }
@@ -80,7 +81,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         if(nonEscrowedRewardAmount > 1) {
             rewardToken.safeTransfer(_receiver, nonEscrowedRewardAmount);
         }
-
+        
         emit RewardsClaimed(_msgSender(), _receiver, escrowedRewardAmount, nonEscrowedRewardAmount);
     }
 

@@ -5,28 +5,30 @@ import sleep from "../../utils/sleep";
 import { constants, utils } from "ethers";
 import { captureRejectionSymbol } from "events";
 
-const MC = "0x949d48eca67b17269629c7194f4b727d4ef9e5d6";
-const LP = "0xcCb63225a7B19dcF66717e4d40C9A72B39331d61";
-const multisig = "0x7e9e4c0876b2102f33a1d82117cc73b7fddd0032";
+const PATH = "0x2a2550e0a75acec6d811ae3930732f7f3ad67588"; //change
+const LP = "0x87051936Dc0669460951d612fBbe93Df88942229"; //change
+const multisig = "0x37672dDa85f3cB8dA4098bAAc5D84E00960Cb081"; //change
+const source = "0x96ff39b9cCE8aE3a7e8d4E0E562cA53E70cF9A59"; //change
 const ONE_YEAR = 60 * 60 * 24 * 365;
+const FOUR_MONTHS = 60 * 60 * 24 * 7 * 17;
 
 task("deploy-liquidity-mining")
     .addFlag("verify")
     .setAction(async(taskArgs, { run, ethers }) => {
     const signers = await ethers.getSigners();
     const liquidityMiningManager:LiquidityMiningManager = await run("deploy-liquidity-mining-manager", {
-        rewardToken: MC,
-        rewardSource: multisig, //multi sig is where the rewards will be stored. 
+        rewardToken: PATH,
+        rewardSource: source, //multi sig is where the rewards will be stored. 
         verify: taskArgs.verify
     });
 
     // await liquidityMiningManager.deployed();
 
     const escrowPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
-        name: "Escrowed Merit Circle",
-        symbol: "EMC",
-        depositToken: MC,
-        rewardToken: MC, //leaves possibility for xSushi like payouts on staked MC
+        name: "Escrowed Path",
+        symbol: "EPATH",
+        depositToken: PATH,
+        rewardToken: PATH, //leaves possibility for xSushi like payouts on staked MC
         escrowPool: constants.AddressZero,
         escrowPortion: "0", //rewards from pool itself are not locked
         escrowDuration: "0", // no rewards escrowed so 0 escrow duration
@@ -38,10 +40,10 @@ task("deploy-liquidity-mining")
     // await escrowPool.deployed();
 
     const mcPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
-        name: "Staked Merit Circle",
-        symbol: "SMC",
-        depositToken: MC, // users stake MC tokens
-        rewardToken: MC, // rewards is MC token
+        name: "Staked Path",
+        symbol: "SPATH",
+        depositToken: PATH, // users stake MC tokens
+        rewardToken: PATH, // rewards is MC token
         escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
         escrowPortion: "1", // 100% is locked
         escrowDuration: ONE_YEAR.toString(), // locked for 1 year
@@ -53,15 +55,15 @@ task("deploy-liquidity-mining")
     // await mcPool.deployed();
 
     const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
-        name: "Staked Merit Circle Uniswap LP",
-        symbol: "SMCUNILP",
+        name: "Staked Path Uniswap LP",
+        symbol: "SPATHULP",
         depositToken: LP, // users stake LP tokens
-        rewardToken: MC, // rewards is MC token
+        rewardToken: PATH, // rewards is MC token
         escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
         escrowPortion: "1", // 100% is locked
         escrowDuration: ONE_YEAR.toString(), // locked for 1 year
         maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
-        maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
+        maxLockDuration: FOUR_MONTHS.toString(), // Users can lock up to 4 months
         verify: taskArgs.verify
     });
 
@@ -82,26 +84,26 @@ task("deploy-liquidity-mining")
     (await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, signers[0].address)).wait(3));
 
     // Add pools
-    console.log("Adding MC Pool");
-    await (await liquidityMiningManager.addPool(mcPool.address, utils.parseEther("0.2"))).wait(3);
-    console.log("Adding MC LP Pool");
-    await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.8"))).wait(3);
+    console.log("Adding PATH Pool");
+    await (await liquidityMiningManager.addPool(mcPool.address, utils.parseEther("0.3"))).wait(3);
+    console.log("Adding PATH LP Pool");
+    await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.7"))).wait(3);
 
     // Assign GOV, DISTRIBUTOR and DEFAULT_ADMIN roles to multisig
-    console.log("setting lmm roles");
-    // renounce gov role from deployer
-    console.log("renouncing gov role");
-    await (await liquidityMiningManager.renounceRole(GOV_ROLE, signers[0].address)).wait(3);
-    console.log("renouncing distributor role");
-    await (await liquidityMiningManager.renounceRole(REWARD_DISTRIBUTOR_ROLE, signers[0].address)).wait(3);
+    // console.log("setting lmm roles");
+    // // renounce gov role from deployer
+    // console.log("renouncing gov role");
+    // await (await liquidityMiningManager.renounceRole(GOV_ROLE, signers[0].address)).wait(3);
+    // console.log("renouncing distributor role");
+    // await (await liquidityMiningManager.renounceRole(REWARD_DISTRIBUTOR_ROLE, signers[0].address)).wait(3);
     console.log("Assigning GOV_ROLE");
     await (await liquidityMiningManager.grantRole(GOV_ROLE, multisig)).wait(3);
-    console.log("Assigning REWARD_DISTRIBUTOR_ROLE");
-    await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, multisig)).wait(3);
+    // console.log("Assigning REWARD_DISTRIBUTOR_ROLE");
+    // await (await liquidityMiningManager.grantRole(REWARD_DISTRIBUTOR_ROLE, multisig)).wait(3);
     console.log("Assigning DEFAULT_ADMIN_ROLE");
     await (await liquidityMiningManager.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
 
-    console.log("Assigning DEFAULT_ADMIN roles on pools");
+    // console.log("Assigning DEFAULT_ADMIN roles on pools");
     await (await escrowPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
     await (await mcPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
     await (await mcLPPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
