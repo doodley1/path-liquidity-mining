@@ -60,6 +60,14 @@ const config: HardhatUserConfig = {
   mainnet: {
     url: process.env.API_URL,
     accounts: [`0x${process.env.PRIVATE_KEY}`]
+    },
+  polygon: {
+    url: process.env.API_POLYGON_URL,
+    accounts: [`0x${process.env.PRIVATE_KEY}`]
+    },
+  mumbai: {
+    url: process.env.API_MUMBAI_URL,
+    accounts: [`0x${process.env.PRIVATE_KEY}`]
     }
   },
   paths: {
@@ -89,8 +97,8 @@ const config: HardhatUserConfig = {
     target: "ethers-v5",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
-  }
+    apiKey: process.env.POLYGONSCAN_API_KEY,
+  },
 };
 
 export default config;

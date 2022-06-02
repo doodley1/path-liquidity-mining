@@ -1,14 +1,20 @@
 import { task } from "hardhat/config";
-
+import { parseEther } from "ethers/lib/utils";
 import { LiquidityMiningManager, TimeLockNonTransferablePool, View } from "../../typechain";
 import sleep from "../../utils/sleep";
 import { constants, utils } from "ethers";
 import { captureRejectionSymbol } from "events";
 
-const PATH = "0x2a2550e0A75aCec6D811AE3930732F7f3ad67588"; //change
-const LP = "0x5689edeaa958d22b851ea8cc97dc99e5dcd9ec0c"; //change
-const multisig = "0xaa273E19e0281790116563C979d3b0AD49dD2FcA"; //change
+const PATH = "0xbb0482e4d528357D29385477E2D0c5DA37991e0B"; //change
+// const LP = "0x5689edeaa958d22b851ea8cc97dc99e5dcd9ec0c"; //change
+// const multisig = "0xaa273E19e0281790116563C979d3b0AD49dD2FcA"; //change
 const ONE_YEAR = 60 * 60 * 24 * 365;
+
+const escrowAddress = "0xfe7574959C595D7a4f7a652F9eCAa420824447ED";
+const stakeAddress = "0xca39B5294dfce03721c66F1e29c8e8B9769D05d2";
+const viewAddress = "0x07fe1CA6cd45C2fABDa63ABc1bbdE8226Cdf2974";
+const liquidityMiningManagerAddress = "0x57CbDb5e05E2d33129d4a39cB8B68c61E6159Bef";
+const VERIFY_DELAY = 100000;
 
 task("verify-liquidity-mining")
     .addFlag("verify")
@@ -21,6 +27,24 @@ task("verify-liquidity-mining")
     // });
 
     // await liquidityMiningManager.deployed();
+
+    console.log("Verifying TimeLockNonTransferablePool, can take some time")
+    await run("verify:verify", {
+        address: escrowAddress,
+        network: "mumbai",
+        constructorArguments: [
+            "Escrowed Path",
+            "EPATH",
+            PATH,
+            PATH,
+            constants.AddressZero,
+            parseEther("0"),
+            "0",
+            parseEther("0"),
+            (ONE_YEAR * 10).toString()
+        ]
+    });
+    console.log("done");
 
     // const escrowPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
     //     name: "Escrowed Path",
@@ -37,33 +61,62 @@ task("verify-liquidity-mining")
 
     // await escrowPool.deployed();
 
+    console.log("Verifying TimeLockNonTransferablePool, can take some time")
+    await sleep(VERIFY_DELAY);
+    await run("verify:verify", {
+        address: stakeAddress,
+        network: "mumbai",
+        constructorArguments: [
+            "Staked Path",
+            "SPATH",
+            PATH,
+            PATH,
+            escrowAddress,
+            parseEther("1"),
+            ONE_YEAR.toString(),
+            parseEther("1"),
+            ONE_YEAR.toString()
+        ]
+    });
+
+    // console.log("Verifying View, can take some time")
+    // // await sleep(VERIFY_DELAY);
+    // await run("verify:verify", {
+    //     address: viewAddress,
+    //     network: "mumbai",
+    //     constructorArguments: [
+    //         liquidityMiningManagerAddress,
+    //         escrowAddress
+    //     ]
+    // });
+
     // const mcPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
     //     name: "Staked Path",
     //     symbol: "SPATH",
     //     depositToken: PATH, // users stake MC tokens
     //     rewardToken: PATH, // rewards is MC token
-    //     escrowPool: "0xfeF45ca3Ce06f127E089BeDf27b7613553ea1eeb", // Rewards are locked in the escrow pool
+    //     escrowPool: "0xB1E702Df1f8eA8447002Ac48212c8eACf5cC75F4", // Rewards are locked in the escrow pool
     //     escrowPortion: "1", // 100% is locked
-    //     escrowDuration: "1000", // locked for 1 year //change
+    //     escrowDuration: ONE_YEAR.toString(), // locked for 1 year
     //     maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
     //     maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
     //     verify: taskArgs.verify
     // });
 
-    // // await mcPool.deployed();
+    // await mcPool.deployed();
 
-    const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
-        name: "Staked Path Uniswap LP",
-        symbol: "SPATHULP",
-        depositToken: LP, // users stake LP tokens
-        rewardToken: PATH, // rewards is MC token
-        escrowPool: "0xfeF45ca3Ce06f127E089BeDf27b7613553ea1eeb", // Rewards are locked in the escrow pool
-        escrowPortion: "1", // 100% is locked
-        escrowDuration: ONE_YEAR.toString(), // locked for 1 year
-        maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
-        maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
-        verify: taskArgs.verify
-    });
+    // const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
+    //     name: "Staked Path Uniswap LP",
+    //     symbol: "SPATHULP",
+    //     depositToken: LP, // users stake LP tokens
+    //     rewardToken: PATH, // rewards is MC token
+    //     escrowPool: "0xfeF45ca3Ce06f127E089BeDf27b7613553ea1eeb", // Rewards are locked in the escrow pool
+    //     escrowPortion: "1", // 100% is locked
+    //     escrowDuration: ONE_YEAR.toString(), // locked for 1 year
+    //     maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
+    //     maxLockDuration: ONE_YEAR.toString(), // Users can lock up to 1 year
+    //     verify: taskArgs.verify
+    // });
 
     // await mcLPPool.deployed();
 

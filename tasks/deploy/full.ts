@@ -5,12 +5,12 @@ import sleep from "../../utils/sleep";
 import { constants, utils } from "ethers";
 import { captureRejectionSymbol } from "events";
 
-const PATH = "0x2a2550e0a75acec6d811ae3930732f7f3ad67588"; //change
-const LP = "0x87051936Dc0669460951d612fBbe93Df88942229"; //change
+const PATH = "0xbb0482e4d528357D29385477E2D0c5DA37991e0B"; //change
+// const LP = "0x87051936Dc0669460951d612fBbe93Df88942229"; //change
 const multisig = "0x37672dDa85f3cB8dA4098bAAc5D84E00960Cb081"; //change
-const source = "0x96ff39b9cCE8aE3a7e8d4E0E562cA53E70cF9A59"; //change
+const source = "0x37672dDa85f3cB8dA4098bAAc5D84E00960Cb081"; //change
 const ONE_YEAR = 60 * 60 * 24 * 365;
-const FOUR_MONTHS = 60 * 60 * 24 * 7 * 17;
+// const FOUR_MONTHS = 60 * 60 * 24 * 7 * 17;
 
 task("deploy-liquidity-mining")
     .addFlag("verify")
@@ -22,7 +22,7 @@ task("deploy-liquidity-mining")
         verify: taskArgs.verify
     });
 
-    // await liquidityMiningManager.deployed();
+    await liquidityMiningManager.deployed();
 
     const escrowPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Escrowed Path",
@@ -37,7 +37,7 @@ task("deploy-liquidity-mining")
         verify: taskArgs.verify
     });
 
-    // await escrowPool.deployed();
+    await escrowPool.deployed();
 
     const mcPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
         name: "Staked Path",
@@ -52,20 +52,21 @@ task("deploy-liquidity-mining")
         verify: taskArgs.verify
     });
 
-    // await mcPool.deployed();
+    await mcPool.deployed();
 
-    const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
-        name: "Staked Path Uniswap LP",
-        symbol: "SPATHULP",
-        depositToken: LP, // users stake LP tokens
-        rewardToken: PATH, // rewards is MC token
-        escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
-        escrowPortion: "1", // 100% is locked
-        escrowDuration: ONE_YEAR.toString(), // locked for 1 year
-        maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
-        maxLockDuration: FOUR_MONTHS.toString(), // Users can lock up to 4 months
-        verify: taskArgs.verify
-    });
+    // no LP pool
+    // const mcLPPool:TimeLockNonTransferablePool = await run("deploy-time-lock-non-transferable-pool", {
+    //     name: "Staked Path Uniswap LP",
+    //     symbol: "SPATHULP",
+    //     depositToken: LP, // users stake LP tokens
+    //     rewardToken: PATH, // rewards is MC token
+    //     escrowPool: escrowPool.address, // Rewards are locked in the escrow pool
+    //     escrowPortion: "1", // 100% is locked
+    //     escrowDuration: ONE_YEAR.toString(), // locked for 1 year
+    //     maxBonus: "1", // Bonus for longer locking is 1. When locking for longest duration you'll receive 2x vs no lock limit
+    //     maxLockDuration: FOUR_MONTHS.toString(), // Users can lock up to 4 months
+    //     verify: taskArgs.verify
+    // });
 
     // await mcLPPool.deployed();
 
@@ -85,9 +86,9 @@ task("deploy-liquidity-mining")
 
     // Add pools
     console.log("Adding PATH Pool");
-    await (await liquidityMiningManager.addPool(mcPool.address, utils.parseEther("0.3"))).wait(3);
-    console.log("Adding PATH LP Pool");
-    await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.7"))).wait(3);
+    await (await liquidityMiningManager.addPool(mcPool.address, utils.parseEther("1"))).wait(3);
+    // console.log("Adding PATH LP Pool");
+    // await (await liquidityMiningManager.addPool(mcLPPool.address, utils.parseEther("0.7"))).wait(3);
 
     // Assign GOV, DISTRIBUTOR and DEFAULT_ADMIN roles to multisig
     // console.log("setting lmm roles");
@@ -106,7 +107,7 @@ task("deploy-liquidity-mining")
     // console.log("Assigning DEFAULT_ADMIN roles on pools");
     await (await escrowPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
     await (await mcPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
-    await (await mcLPPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
+    // await (await mcLPPool.grantRole(DEFAULT_ADMIN_ROLE, multisig)).wait(3);
 
     console.log("DONE");
 
@@ -114,7 +115,7 @@ task("deploy-liquidity-mining")
         liquidityMiningManager: liquidityMiningManager.address,
         escrowPool: escrowPool.address,
         mcPool: mcPool.address,
-        mcLPPool: mcLPPool.address,
+        // mcLPPool: mcLPPool.address,
         view: view.address
     });
 

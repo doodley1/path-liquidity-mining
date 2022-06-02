@@ -20,6 +20,7 @@ task("deploy-view")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: view.address,
+                network: "mumbai",
                 constructorArguments: [
                     taskArgs.liquidityMiningManager,
                     taskArgs.escrowPool

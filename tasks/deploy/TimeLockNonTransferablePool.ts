@@ -38,6 +38,7 @@ task("deploy-time-lock-non-transferable-pool")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: timeLockNonTransferablePool.address,
+                network: "mumbai",
                 constructorArguments: [
                     taskArgs.name,
                     taskArgs.symbol,

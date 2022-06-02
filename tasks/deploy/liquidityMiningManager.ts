@@ -21,6 +21,7 @@ task("deploy-liquidity-mining-manager")
             await sleep(VERIFY_DELAY);
             await run("verify:verify", {
                 address: liquidityMiningManager.address,
+                network: "mumbai",
                 constructorArguments: [
                     taskArgs.rewardToken,
                     taskArgs.rewardSource
