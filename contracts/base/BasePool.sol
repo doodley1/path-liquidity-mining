@@ -11,6 +11,7 @@ import "../interfaces/ITimeLockPool.sol";
 
 import "./AbstractRewards.sol";
 import "./TokenSaver.sol";
+import "./Positions.sol";
 
 abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver {
     using SafeERC20 for IERC20;
@@ -18,11 +19,13 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
     using SafeCast for int256;
 
     IERC20 public immutable depositToken;
+    StakingPositions public immutable stakePosition;
     IERC20 public immutable rewardToken;
     ITimeLockPool public immutable escrowPool;
     uint256 public immutable escrowPortion; // how much is escrowed 1e18 == 100%
     uint256 public immutable escrowDuration; // escrow duration in seconds
     uint256 public totalRewardsClaimed = 0;
+    address depositOldPosition;
 
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
 
@@ -30,6 +33,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         string memory _name,
         string memory _symbol,
         address _depositToken,
+        address _depositOldPosition,
         address _rewardToken,
         address _escrowPool,
         uint256 _escrowPortion,
@@ -38,10 +42,12 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         require(_escrowPortion <= 1e18, "BasePool.constructor: Cannot escrow more than 100%");
         require(_depositToken != address(0), "BasePool.constructor: Deposit token must be set");
         depositToken = IERC20(_depositToken);
+        stakePosition = StakingPositions(_depositOldPosition);
         rewardToken = IERC20(_rewardToken);
         escrowPool = ITimeLockPool(_escrowPool);
         escrowPortion = _escrowPortion;
         escrowDuration = _escrowDuration;
+        depositOldPosition = _depositOldPosition;
 
         if(_rewardToken != address(0) && _escrowPool != address(0)) {
             IERC20(_rewardToken).safeApprove(_escrowPool, type(uint256).max);
@@ -63,8 +69,8 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         _correctPointsForTransfer(_from, _to, _value);
 	}
 
-    function distributeRewards(uint256 _amount) external override {
-        rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
+    function distributeRewards(uint256 _amount) internal virtual override {
+        // rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
         _distributeRewards(_amount);
     }
 
