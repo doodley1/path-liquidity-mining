@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 
 import "../interfaces/IBasePool.sol";
 import "../interfaces/ITimeLockPool.sol";
@@ -13,7 +14,7 @@ import "./AbstractRewards.sol";
 import "./TokenSaver.sol";
 import "./Positions.sol";
 
-abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver {
+abstract contract BasePool is ERC20Votes, AccessControlEnumerable, AbstractRewards, IBasePool, TokenSaver {
     using SafeERC20 for IERC20;
     using SafeCast for uint256;
     using SafeCast for int256;
@@ -26,6 +27,21 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
     uint256 public immutable escrowDuration; // escrow duration in seconds
     uint256 public totalRewardsClaimed = 0;
     address depositOldPosition;
+
+    error NotGovError();
+
+    bytes32 public constant GOV_ROLE = keccak256("GOV_ROLE");
+
+    modifier onlyGov() {
+        _onlyGov();
+        _;
+    }
+
+    function _onlyGov() private view {
+        if (!hasRole(GOV_ROLE, _msgSender())) {
+            revert NotGovError();
+        }
+    }
 
     event RewardsClaimed(address indexed _from, address indexed _receiver, uint256 _escrowedAmount, uint256 _nonEscrowedAmount);
 
@@ -48,6 +64,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         escrowPortion = _escrowPortion;
         escrowDuration = _escrowDuration;
         depositOldPosition = _depositOldPosition;
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
         if(_rewardToken != address(0) && _escrowPool != address(0)) {
             IERC20(_rewardToken).safeApprove(_escrowPool, type(uint256).max);
@@ -69,7 +86,7 @@ abstract contract BasePool is ERC20Votes, AbstractRewards, IBasePool, TokenSaver
         _correctPointsForTransfer(_from, _to, _value);
 	}
 
-    function distributeRewards(uint256 _amount) internal virtual override {
+    function distributeRewards(uint256 _amount) public virtual override {
         // rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
         _distributeRewards(_amount);
     }

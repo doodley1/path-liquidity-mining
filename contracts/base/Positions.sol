@@ -51,8 +51,8 @@ contract StakingPositions is ERC721Enumerable, Ownable {
     }
   }
 
-  function readPosition(uint256 tokenid) external view returns (Positions memory) {
-    return tokenIdAttr[tokenid];
+  function readPosition(uint256 tokenid) external view returns (uint256, uint64) {
+    return (tokenIdAttr[tokenid].amount,  tokenIdAttr[tokenid].end);
   }
 
   function setBaseURI(string memory uri) public onlyOwner {

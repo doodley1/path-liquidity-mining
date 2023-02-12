@@ -4,15 +4,16 @@ import { expect } from "chai";
 import { SSL_OP_SSLEAY_080_CLIENT_DH_BUG } from "constants";
 import { BigNumber, constants } from "ethers";
 import hre from "hardhat";
-import { TestToken__factory, TimeLockPool__factory } from "../typechain";
+import { TestToken__factory, TimeLockPool__factory,  TestNFT__factory} from "../typechain";
 import { TestToken } from "../typechain";
 import { TimeLockPool } from "../typechain/TimeLockPool";
+import { TestNFT } from "../typechain";
 import TimeTraveler from "../utils/TimeTraveler";
 
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.77");
-const MAX_BONUS = parseEther("1");
-const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
+const MAX_BONUS = parseEther("5");
+const MAX_LOCK_DURATION = 60 * 60 * 24 * 365 * 5;
 const INITIAL_MINT = parseEther("1000000");
 
 describe("TimeLockPool", function () {
@@ -22,14 +23,34 @@ describe("TimeLockPool", function () {
     let account2: SignerWithAddress;
     let account3: SignerWithAddress;
     let account4: SignerWithAddress;
+    let account5: SignerWithAddress;
     let signers: SignerWithAddress[];
 
     let timeLockPool: TimeLockPool;
     let escrowPool: TimeLockPool;
     let depositToken: TestToken;
     let rewardToken: TestToken;
+    let depositNFT: TestNFT;
+    let depositNFT5: TestNFT;
+
+    let timeLockPool4: TimeLockPool;
+    let timeLockPool5: TimeLockPool;
+    let timeLockPoolDeployer: TimeLockPool;
+
+    let startTime = 1676584800;
     
     const timeTraveler = new TimeTraveler(hre.network.provider);
+    const CURVE = [
+        (0*1e18).toString(),
+        (0.65*1e18).toString(),
+        (1.5*1e18).toString(),
+        (3*1e18).toString(),
+        (5*1e18).toString()
+    ]
+    const escrowCURVE = [
+        (0).toString(),
+        (0).toString()
+    ]
 
     before(async() => {
         [
@@ -38,16 +59,24 @@ describe("TimeLockPool", function () {
             account2,
             account3,
             account4,
+            account5,
             ...signers
         ] = await hre.ethers.getSigners();
 
         const testTokenFactory = await new TestToken__factory(deployer);
+        const testNFTFactory = await new TestNFT__factory(deployer);
 
         depositToken = await testTokenFactory.deploy("DPST", "Deposit Token");
         rewardToken = await testTokenFactory.deploy("RWRD", "Reward Token");
+        depositNFT = await testNFTFactory.deploy();
 
         await depositToken.mint(account1.address, INITIAL_MINT);
         await rewardToken.mint(account1.address, INITIAL_MINT);
+        await rewardToken.mint(deployer.address, INITIAL_MINT);
+        
+        await depositNFT.mintPosition(account4.address, parseEther("1000"), 1676220651)
+        await depositNFT.mintPosition(account4.address, parseEther("1000"), 1776220651)
+        await depositNFT.mintPosition(account5.address, parseEther("1000"), 1676584801)
 
         const timeLockPoolFactory = new TimeLockPool__factory(deployer);
         
@@ -57,32 +86,46 @@ describe("TimeLockPool", function () {
             rewardToken.address,
             constants.AddressZero,
             constants.AddressZero,
+            constants.AddressZero,
             0,
             0,
             0,
-            ESCROW_DURATION
+            ESCROW_DURATION,
+            escrowCURVE
         );
 
         timeLockPool = await timeLockPoolFactory.deploy(
             "Staking Pool",
             "STK",
             depositToken.address,
+            depositNFT.address,
             rewardToken.address,
             escrowPool.address,
             ESCROW_PORTION,
             ESCROW_DURATION,
             MAX_BONUS,
-            MAX_LOCK_DURATION
+            MAX_LOCK_DURATION,
+            CURVE
         );
 
-        
+        await rewardToken.approve(timeLockPool.address, constants.MaxUint256);
+        const govRole = await timeLockPool.GOV_ROLE()
+        await timeLockPool.grantRole(govRole, deployer.address);
+
         // connect account1 to all contracts
         timeLockPool = timeLockPool.connect(account1);
         escrowPool = escrowPool.connect(account1);
         depositToken = depositToken.connect(account1);
         rewardToken = rewardToken.connect(account1);
+        depositNFT = depositNFT.connect(account4)
+        depositNFT5 = depositNFT.connect(account5)
+        timeLockPool4 = timeLockPool.connect(account4);
+        timeLockPool5 = timeLockPool.connect(account5);
+        timeLockPoolDeployer = timeLockPool.connect(deployer);
         
         await depositToken.approve(timeLockPool.address, constants.MaxUint256);
+        await depositNFT.setApprovalForAll(timeLockPool.address, true);
+        await depositNFT5.setApprovalForAll(timeLockPool.address, true);
 
         await timeTraveler.snapshot();
     })
@@ -176,6 +219,44 @@ describe("TimeLockPool", function () {
             await depositToken.approve(timeLockPool.address, 0);
             await expect(timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address)).to.be.revertedWith("ERC20: transfer amount exceeds allowance");
         });
+    });
+    describe("depositPosition", async() => {
+
+        const nftAmount = parseEther("1000");
+
+        it("Depositing NFT should fail with old time", async() => {
+            await expect(timeLockPool4.depositPositions(0, 0, account4.address)).to.be.revertedWith("Cannot stake expired positions");
+        });
+
+        it("Depositing NFT", async() => {
+            await timeLockPool4.depositPositions(1, 0, account4.address);
+
+            const timeLockPoolBalance = await timeLockPool.balanceOf(account4.address)
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+
+            const multiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+
+            expect(timeLockPoolBalance).to.eq(nftAmount.mul(multiplier).div(constants.WeiPerEther));
+        });
+    describe("distributeAndBurnRewards", async() => {
+        const nftAmount = parseEther("1000");
+        const rewards = parseEther("1000");
+        const DEPOSIT_AMOUNT = parseEther("10");
+
+        it("Depositing NFT", async() => {
+            timeTraveler.setNextBlockTimestamp(startTime-86400);
+            await timeLockPool.deposit(DEPOSIT_AMOUNT, 0, account3.address);
+            await timeLockPool5.depositPositions(2, 0, account5.address);
+            const timeLockPoolBalance = await timeLockPool.balanceOf(account5.address);
+            const MIN_LOCK_DURATION = await timeLockPool.MIN_LOCK_DURATION();
+            const multiplier = await timeLockPool.getMultiplier(MIN_LOCK_DURATION);
+            expect(timeLockPoolBalance).to.eq(nftAmount.mul(multiplier).div(constants.WeiPerEther));
+            timeTraveler.setNextBlockTimestamp(startTime);
+            await timeLockPoolDeployer.distributeRewards(rewards);
+            const timeLockPoolBalanceAfter = await timeLockPool.balanceOf(account5.address);
+            expect(timeLockPoolBalanceAfter).to.eq(parseEther("0"));
+            });
+        })
     });
     describe("withdraw", async() => {
         const DEPOSIT_AMOUNT = parseEther("176.378");

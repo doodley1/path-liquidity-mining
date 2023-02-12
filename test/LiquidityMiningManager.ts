@@ -3,15 +3,18 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { BigNumber, constants } from "ethers";
 import hre from "hardhat";
-import { LiquidityMiningManager, LiquidityMiningManager__factory, TestToken__factory, TimeLockNonTransferablePool__factory } from "../typechain";
+import { LiquidityMiningManager, LiquidityMiningManager__factory, TestToken__factory, TimeLockNonTransferablePool__factory, TestNFT__factory } from "../typechain";
 import { TestToken } from "../typechain";
+import { TestNFT } from "../typechain";
 import { TimeLockNonTransferablePool } from "../typechain/TimeLockNonTransferablePool";
 import TimeTraveler from "../utils/TimeTraveler";
 
-const POOL_COUNT = 4;
+const POOL_COUNT = 1;
 const ESCROW_DURATION = 60 * 60 * 24 * 365;
 const ESCROW_PORTION = parseEther("0.6");
 const INITIAL_REWARD_MINT = parseEther("1000000");
+const MAX_BONUS = parseEther("5");
+const MAX_LOCK_DURATION = 60 * 60 * 24 * 365;
 
 describe("LiquidityMiningManager", function () {
 
@@ -25,10 +28,21 @@ describe("LiquidityMiningManager", function () {
 
     let depositToken: TestToken;
     let rewardToken: TestToken;
+    let depositNFT: TestNFT;
     const pools: TimeLockNonTransferablePool[] = [];
     let escrowPool: TimeLockNonTransferablePool;
     let liquidityMiningManager: LiquidityMiningManager;
-
+    const CURVE = [
+        (0*1e18).toString(),
+        (0.65*1e18).toString(),
+        (1.5*1e18).toString(),
+        (3*1e18).toString(),
+        (5*1e18).toString()
+    ]
+    const escrowCURVE = [
+        (0).toString(),
+        (0).toString()
+    ]
     let timeTraveler = new TimeTraveler(hre.network.provider);
 
     before(async() => {
@@ -46,19 +60,23 @@ describe("LiquidityMiningManager", function () {
 
         depositToken = await testTokenFactory.deploy("Deposit Token", "DPST");
         rewardToken = await testTokenFactory.deploy("Reward Token", "RWRD");
+        const testNFTFactory = await new TestNFT__factory(deployer);
+
 
         const poolFactory = new TimeLockNonTransferablePool__factory(deployer);
 
         escrowPool = await poolFactory.deploy(
-            "EscrowPool",
+            "ESCROW",
             "ESCRW",
             rewardToken.address,
-            rewardToken.address,
+            constants.AddressZero,
+            constants.AddressZero,
             constants.AddressZero,
             0,
             0,
             0,
-            ESCROW_DURATION
+            ESCROW_DURATION,
+            escrowCURVE
         );
 
         liquidityMiningManager = await (new LiquidityMiningManager__factory(deployer)).deploy(rewardToken.address, rewardSource.address);
@@ -74,12 +92,14 @@ describe("LiquidityMiningManager", function () {
                     `Pool ${i}`,
                     `P${i}`,
                     depositToken.address,
+                    depositNFT.address,
                     rewardToken.address,
                     escrowPool.address,
                     ESCROW_PORTION,
                     ESCROW_DURATION,
-                    0,
-                    ESCROW_PORTION
+                    MAX_BONUS,
+                    MAX_LOCK_DURATION,
+                    CURVE
                 )
             );         
         }

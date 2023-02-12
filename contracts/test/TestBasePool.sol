@@ -9,11 +9,12 @@ contract TestBasePool is BasePool {
         string memory _name,
         string memory _symbol,
         address _depositToken,
+        address _depositOldPosition,
         address _rewardToken,
         address _escrowPool,
         uint256 _escrowPortion,
         uint256 _escrowDuration
-    ) BasePool(_name, _symbol, _depositToken, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
+    ) BasePool(_name, _symbol, _depositToken, _depositOldPosition, _rewardToken, _escrowPool, _escrowPortion, _escrowDuration) {
         // silence
     }
     function mint(address _receiver, uint256 _amount) external {

@@ -36,3 +36,4 @@ yarn-error.log*
 .solhintignore
 .yarnrc.yml
 .DS_Store
+.vscode/
