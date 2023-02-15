@@ -19,6 +19,7 @@ contract StakingPositions is ERC721Enumerable, Ownable {
 
   string public baseURI;
   mapping(uint256 => Positions) public tokenIdAttr;
+  mapping(address => bool) public allowedTransfer;
 
   constructor()
   ERC721("Position", "StakePosition") {}
@@ -67,8 +68,21 @@ contract StakingPositions is ERC721Enumerable, Ownable {
     return _tokenIds.current();
   }
 
-//   function  _transfer(address from, address to, uint256 tokenId) internal virtual override(ERC721) {
-//         revert("NON_TRANSFERABLE");
-//     }
+  function setTransferAddress(address _address) external onlyOwner {
+    allowedTransfer[_address] = true;
+  }
 
+  function withdraw() external onlyOwner {
+    uint256 balance = address(this).balance;
+    payable(msg.sender).transfer(balance);
+  }
+
+  function _transfer(
+      address from,
+      address to,
+      uint256 tokenId
+  ) internal override {
+      require(allowedTransfer[to], "Can only transfer NFT to specified addresses");
+      super._transfer(from, to, tokenId);
+    }
 }

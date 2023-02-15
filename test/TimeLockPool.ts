@@ -77,6 +77,7 @@ describe("TimeLockPool", function () {
         await depositNFT.mintPosition(account4.address, parseEther("1000"), 1676220651)
         await depositNFT.mintPosition(account4.address, parseEther("1000"), 1776220651)
         await depositNFT.mintPosition(account5.address, parseEther("1000"), 1676584801)
+        await depositNFT.mintPosition(account4.address, parseEther("100"), 1776220651)
 
         const timeLockPoolFactory = new TimeLockPool__factory(deployer);
         
@@ -111,6 +112,7 @@ describe("TimeLockPool", function () {
         await rewardToken.approve(timeLockPool.address, constants.MaxUint256);
         const govRole = await timeLockPool.GOV_ROLE()
         await timeLockPool.grantRole(govRole, deployer.address);
+        await depositNFT.setTransferAddress(timeLockPool.address);
 
         // connect account1 to all contracts
         timeLockPool = timeLockPool.connect(account1);
@@ -281,5 +283,16 @@ describe("TimeLockPool", function () {
             expect(totalDeposit).to.eq(0);
             expect(depositTokenBalance).to.eq(DEPOSIT_AMOUNT);
         });
-    });  
+    });
+    describe("non transferable NFT", async() => {
+        it("Cannot transfer NFT to non approved address", async() => {
+            await expect(depositNFT.transferFrom(account4.address, account5.address, 3)).to.be.revertedWith("Can only transfer NFT to specified addresses");
+        })
+        it("Transfer function should work after approval", async() => {
+            await depositNFT.connect(deployer).setTransferAddress(account5.address);
+            await depositNFT.transferFrom(account4.address, account5.address, 3);
+            const tokenIDOwner = await depositNFT.ownerOf(3);
+            expect(tokenIDOwner).to.eq(account5.address);
+        })
+    })  
 });

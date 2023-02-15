@@ -7,13 +7,13 @@ import { parseEther } from "@ethersproject/units";
 import { captureRejectionSymbol } from "events";
 
 const PATH = "0x79EAad66077b2Cbe0175dB8aeb759a5aD669d568"; //change
-const NFT = "0xc5076e79C472D96DE42C23C33F8ac42bb94AB925" //change
+const NFT = "0x67f0260254FB3Cee97dA18077927888Ed72D1f17" //change
 // const LP = "0x87051936Dc0669460951d612fBbe93Df88942229"; //change
 const multisig = "0x37672dDa85f3cB8dA4098bAAc5D84E00960Cb081"; //change
 const source = "0x37672dDa85f3cB8dA4098bAAc5D84E00960Cb081"; //change
 const ONE_YEAR = 60 * 60 * 24 * 365;
 const FIVE_YEAR = 60 * 60 * 24 * 365 * 5;
-const MAX_BONUS = parseEther("5")
+const MAX_BONUS = parseEther("7");
 // const FOUR_MONTHS = 60 * 60 * 24 * 7 * 17;
 
 const CURVE = [
@@ -21,7 +21,9 @@ const CURVE = [
     parseEther("0.65"),
     parseEther("1.5"),
     parseEther("3"),
-    parseEther("5")
+    parseEther("5"),
+    parseEther("5"),
+    parseEther("7")
 ]
 
 const escrowCURVE = [

@@ -3,7 +3,7 @@ import { task } from "hardhat/config";
 import { LiquidityMiningManager__factory } from "../../typechain";
 import sleep from "../../utils/sleep";
 
-const VERIFY_DELAY = 100000;
+const VERIFY_DELAY = 30000;
 
 task("deploy-liquidity-mining-manager")
     .addParam("rewardToken", "Address of token used as reward")

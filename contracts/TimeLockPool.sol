@@ -9,9 +9,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./base/BasePool.sol";
 import "./interfaces/ITimeLockPool.sol";
 
-import "hardhat/console.sol";
-
-
 contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
     using Math for uint256;
     using SafeERC20 for IERC20;
@@ -45,6 +42,8 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
     struct PositionDeposit {
         uint256 tokenId;
         uint256 shares;
+        uint256 stakeTime;
+        uint256 expiredIndex;
         uint64 end;
         address owner;
     }
@@ -124,9 +123,13 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         uint256 mintAmount = amount * getMultiplier(duration) / 1e18;
 
 
+        uint256 expiringPosition = calculateExpringPosition(end);
+
         PositionDeposit memory positionDeposit = PositionDeposit({
             tokenId: tokenId,
             shares: mintAmount,
+            stakeTime: block.timestamp,
+            expiredIndex: expiringPosition,
             end: end,
             owner: _receiver
         });
@@ -134,7 +137,9 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         positionDepositsOf[_receiver].push(positionDeposit);
 
         positionOwnerOf[tokenId] = positionDeposit;
-        expiringPositions[calculateExpringPosition(end)].push(tokenId);
+
+        expiringPositions[expiringPosition].push(tokenId);
+
 
         _mint(_receiver, mintAmount);
         emit DepositedPosition(amount, end, duration, mintAmount, _receiver, _msgSender());
@@ -210,18 +215,16 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         isAdminUnlock = !isAdminUnlock;
     }
 
+    function adjustStartTime(uint256 _time) external onlyGov {
+        startTime = _time;
+    }
+
     function adjustShares(uint256 time) public onlyGov {
         uint256 burnsharesindex = calculateDaysSinceStart(time);
         uint256 sharesToBurnLen = expiringPositions[burnsharesindex].length;
         if (sharesToBurnLen != 0) {
             for (uint i =  sharesToBurnLen; i > 0 ; i--) {
-            uint256 tokenToBurn = expiringPositions[burnsharesindex][i-1];
-            address owner = positionOwnerOf[tokenToBurn].owner;
-            uint256 shareAmount = positionOwnerOf[tokenToBurn].shares;
-            _burn(owner, shareAmount);
-            delete positionOwnerOf[tokenToBurn];
-                    // remove Deposit
-            expiringPositions[burnsharesindex].pop();
+                burnShares(burnsharesindex, i-1);
             }
         }
     }
@@ -230,16 +233,20 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         require(expiringPositions[key].length >= maxIndex);
         uint256 sharesToBurnLen = expiringPositions[key].length;
         if (sharesToBurnLen != 0) {
-            for (uint i =  maxIndex - 1; i >= 0 ; i--) {
-            uint256 tokenToBurn = expiringPositions[key][i];
-            address owner = positionOwnerOf[tokenToBurn].owner;
-            uint256 shareAmount = positionOwnerOf[tokenToBurn].shares;
-            _burn(owner, shareAmount);
-            delete positionOwnerOf[tokenToBurn];
-                    // remove Deposit
-            expiringPositions[key].pop();
+            for (uint i =  maxIndex; i >= 0 ; i--) {
+                burnShares(key, i-1);
             }
         }
+    }
+
+    function burnShares(uint256 key, uint256 index) public onlyGov {
+        uint256 tokenToBurn = expiringPositions[key][index];
+        address owner = positionOwnerOf[tokenToBurn].owner;
+        uint256 shareAmount = positionOwnerOf[tokenToBurn].shares;
+        _burn(owner, shareAmount);
+        delete positionOwnerOf[tokenToBurn];
+                // remove Deposit
+        expiringPositions[key].pop();
     }
 
 
@@ -275,7 +282,9 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
 
     function distributeRewards(uint256 _amount) public override onlyGov {
         rewardToken.safeTransferFrom(_msgSender(), address(this), _amount);
-        adjustShares(block.timestamp);
+        if (block.timestamp > startTime) {
+            adjustShares(block.timestamp);
+        }
         super.distributeRewards(_amount);
     }
 
