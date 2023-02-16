@@ -16,12 +16,17 @@ const FIVE_YEAR = 60 * 60 * 24 * 365 * 5;
 const MAX_BONUS = parseEther("7");
 // const FOUR_MONTHS = 60 * 60 * 24 * 7 * 17;
 
+
+// allow NFT to transfer to contract
+// set onlyGov to liquidityminingmanager
+// set onlygov to timelockpool
+
+
 const CURVE = [
     parseEther("0"),
     parseEther("0.65"),
     parseEther("1.5"),
     parseEther("3"),
-    parseEther("5"),
     parseEther("5"),
     parseEther("7")
 ]

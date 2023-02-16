@@ -25,7 +25,6 @@ const CURVE = [
     parseEther("1.5"),
     parseEther("3"),
     parseEther("5"),
-    parseEther("5"),
     parseEther("7")
 ]
 
