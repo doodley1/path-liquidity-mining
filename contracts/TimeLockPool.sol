@@ -19,7 +19,7 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
     bool public isAllowPositionStaking = true;
     bool public isAllowDeposits = true;
     bool public isAdminUnlock = false;
-    uint256 startTime = 1676584800;
+    uint256 startTime = 1676887200;
     uint256 daysSinceStart = 0;
     uint256[] public curve;
     uint256 public unit;
@@ -195,7 +195,7 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
     }
 
     function calculateExpringPosition(uint256 endTime) internal view returns(uint256) {
-        return (endTime - startTime) / 86400;
+        return ((endTime - startTime) / 86400) + 1;
     }
 
     function calculateDaysSinceStart(uint256 time) internal view returns (uint256) {
@@ -233,7 +233,7 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         require(expiringPositions[key].length >= maxIndex);
         uint256 sharesToBurnLen = expiringPositions[key].length;
         if (sharesToBurnLen != 0) {
-            for (uint i =  maxIndex; i >= 0 ; i--) {
+            for (uint i =  sharesToBurnLen; i > sharesToBurnLen - maxIndex; i--) {
                 burnShares(key, i-1);
             }
         }
@@ -243,10 +243,9 @@ contract TimeLockPool is BasePool, ITimeLockPool, Ownable {
         uint256 tokenToBurn = expiringPositions[key][index];
         address owner = positionOwnerOf[tokenToBurn].owner;
         uint256 shareAmount = positionOwnerOf[tokenToBurn].shares;
-        _burn(owner, shareAmount);
-        delete positionOwnerOf[tokenToBurn];
-                // remove Deposit
+        expiringPositions[key][index] = expiringPositions[key][expiringPositions[key].length-1];
         expiringPositions[key].pop();
+        _burn(owner, shareAmount);
     }
 
 
